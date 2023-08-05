@@ -37,13 +37,13 @@ pub async fn trade_signal_handler(data: Order) {
     let word = match env::var("PASSPHARSE") {
         Ok(expr) => expr.to_string(),
         Err(_) => {
-            println!("PASSPHARSE Not Found make sure to setting environments");
+            info!("PASSPHARSE Not Found make sure to setting environments");
             "".to_string()
         }
     };
     if pass != word {
         Arbiter::try_current().unwrap().stop();
-        println!("Invalid Passpharse");
+        info!("Invalid Passpharse");
         return;
     }
 
@@ -64,14 +64,14 @@ pub async fn trade_signal_handler(data: Order) {
     let api_key = match env::var("BINANCE_API") {
         Ok(apikey) => apikey.to_string(),
         Err(_) => {
-            println!("Not Found BINANCE_API Key in the environments");
+            info!("Not Found BINANCE_API Key in the environments");
             "".to_string()
         }
     };
     let api_sec = match env::var("BINANCE_SEC") {
         Ok(apikey) => apikey.to_string(),
         Err(_) => {
-            println!("Not Found BINANCE_SEC in the environments");
+            info!("Not Found BINANCE_SEC in the environments");
             "".to_string()
         }
     };
@@ -114,7 +114,7 @@ pub async fn trade_signal_handler(data: Order) {
                 exchange.openlong(&symbol, amount).await;
                 exchange.update_account().await;
                 let balance = exchange.account_info.total_wallet_balance.clone();
-                let balance = exchange.amount_to_precision(balance, 3);
+                let balance = exchange.price_to_precision(balance);
                 notify_send(format!(
                     "ORDER INFO:\nSymbol: {symbol}\nPrice: {price}\nSignal: {:#?}\n\
 Amount: {amount}\nLeverage: {lev}\nBalance : {balance} $",
@@ -134,7 +134,7 @@ Amount: {amount}\nLeverage: {lev}\nBalance : {balance} $",
                 exchange.openshort(&symbol, amount).await;
                 exchange.update_account().await;
                 let balance = exchange.account_info.total_wallet_balance.clone();
-                let balance = exchange.amount_to_precision(balance, 3);
+                let balance = exchange.price_to_precision(balance);
                 notify_send(format!(
                     "ORDER INFO:\nSymbol: {symbol}\nPrice: {price}\nSignal: {:#?}\n\
 Amount: {amount}\nLeverage: {lev}\nBalance : {balance} $",
@@ -144,11 +144,11 @@ Amount: {amount}\nLeverage: {lev}\nBalance : {balance} $",
             }
             NewOrderSide::CloseLong => {
                 let unpnl = open_positions.unrealized_profit;
-                let unpnl = exchange.amount_to_precision(unpnl, 3);
+                let unpnl = exchange.price_to_precision(unpnl);
                 exchange.closelong(&symbol, amount).await;
                 exchange.update_account().await;
                 let balance = exchange.account_info.total_wallet_balance.clone();
-                let balance = exchange.amount_to_precision(balance, 3);
+                let balance = exchange.price_to_precision(balance);
                 notify_send(format!(
                     "ORDER INFO:\nSymbol: {symbol}\nPrice: {price}\nSignal: {:#?}\n\
 Amount: {amount}\nLeverage: {lev}\nClosed P/L: {unpnl} $\nBalance : {balance} $",
@@ -158,11 +158,11 @@ Amount: {amount}\nLeverage: {lev}\nClosed P/L: {unpnl} $\nBalance : {balance} $"
             }
             NewOrderSide::CloseShort => {
                 let unpnl = open_positions.unrealized_profit;
-                let unpnl = exchange.amount_to_precision(unpnl, 3);
+                let unpnl = exchange.price_to_precision(unpnl);
                 exchange.closeshort(&symbol, amount).await;
                 exchange.update_account().await;
                 let balance = exchange.account_info.total_wallet_balance.clone();
-                let balance = exchange.amount_to_precision(balance, 3);
+                let balance = exchange.price_to_precision(balance);
                 notify_send(format!(
                     "ORDER INFO:\nSymbol: {symbol}\nPrice: {price}\nSignal: {:#?}\n\
 Amount: {amount}\nLeverage: {lev}\nClosed P/L: {unpnl} $\nBalance : {balance} $",
@@ -173,9 +173,7 @@ Amount: {amount}\nLeverage: {lev}\nClosed P/L: {unpnl} $\nBalance : {balance} $"
         }
     }
 
-    // println!("{:?}", &open_positions);
-    // println!("{:?}", &position_info.total_unrealized_profit);
-    println!(
+    info!(
         "ORDER INFO: symbol: {symbol} Price: {price} side: {:#?} amount: {amount} leverage: {lev}",
         side
     );

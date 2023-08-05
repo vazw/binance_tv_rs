@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::env;
 
 use reqwest;
+use tracing::info;
 pub async fn notify_send(message: String) {
     let url = "https://notify-api.line.me/api/notify";
     let token = match env::var("LINE_TOKEN") {
@@ -21,8 +22,8 @@ pub async fn notify_send(message: String) {
         .unwrap();
 
     if res.status().is_success() {
-        println!("Notification sent successfully!");
+        info!("Notification sent successfully!");
     } else {
-        println!("Failed to send notification: {}", res.status());
+        info!("Failed to send notification: {}", res.status());
     };
 }

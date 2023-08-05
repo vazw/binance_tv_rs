@@ -48,6 +48,11 @@ impl Exchange {
         (num.abs() * multiplier).round() / multiplier
     }
 
+    pub fn price_to_precision(&self, num: f64) -> f64 {
+        let multiplier = 10f64.powi(3);
+        (num * multiplier).round() / multiplier
+    }
+
     pub async fn openshort(&self, symbol: &String, amount: f64) {
         let market_sell = OrderRequest {
             symbol: symbol.to_string(),

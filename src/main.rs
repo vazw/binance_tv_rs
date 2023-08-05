@@ -12,7 +12,7 @@ async fn main() -> std::io::Result<()> {
             .service(hello)
             .service(order)
     })
-    .bind(("0.0.0.0", 8080))?
+    .bind(("0.0.0.0", 9994))?
     .run()
     .await
 }

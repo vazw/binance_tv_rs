@@ -1,58 +1,81 @@
-use binance::account::{
-    Account, CancelReplaceRequest, OrderCancellation, OrderRequest, OrderStatusRequest, OrdersQuery,
-};
-use binance::api::Binance;
-// use binance::errors
+use binance::api::*;
 use binance::config::Config;
-use binance::errors::Error as BinanceLibError;
-use binance::general::General;
-use binance::market::Market;
-use binance::rest_model::{AccountInformation, Balance, OrderSide, OrderType, SymbolPrice};
+use binance::futures::account::{FuturesAccount, OrderRequest};
+use binance::futures::general::FuturesGeneral;
+use binance::futures::market::FuturesMarket;
+use binance::futures::rest_model::*;
 use tracing::{error, info};
 
 #[derive(Clone)]
 pub struct Exchange {
-    pub account: Account,
-    pub market: Market,
-    // api_key: String,
-    // api_sec: String,
+    pub account: FuturesAccount,
+    pub market: FuturesMarket,
+    pub general: FuturesGeneral,
+    pub exchange_info: ExchangeInformation,
+    pub account_info: AccountInformation,
+    pub dual_postition: bool,
 }
 
 impl Exchange {
-    pub fn new(api_key: String, api_sec: String) -> Self {
-        // let api_key = api_key;
-        // let api_sec = api_sec;
+    pub async fn new(api_key: String, api_sec: String) -> Self {
         let config = Config::default();
-        let account =
+        let account: FuturesAccount =
             Binance::new_with_config(Some(api_key.clone()), Some(api_sec.clone()), &config);
-        let market =
+        let market: FuturesMarket =
             Binance::new_with_config(Some(api_key.clone()), Some(api_sec.clone()), &config);
+        let general: FuturesGeneral =
+            Binance::new_with_config(Some(api_key.clone()), Some(api_sec.clone()), &config);
+        let exchange_info = general.exchange_info().await.unwrap();
+        let account_info = account.account_information().await.unwrap();
+        let dual_postition = match account_info.positions.iter().next().unwrap().position_side {
+            PositionSide::Both => false,
+            PositionSide::Long => true,
+            PositionSide::Short => true,
+        };
+
         Self {
             account,
             market,
-            // api_key,
-            // api_sec,
+            general,
+            exchange_info,
+            account_info,
+            dual_postition,
         }
     }
 
+    pub fn amount_to_precision(&self, num: f64, precision: i32) -> f64 {
+        let multiplier = 10f64.powi(precision);
+        (num.abs() * multiplier).round() / multiplier
+    }
+
     pub async fn openshort(&self, symbol: &String, amount: f64) {
-        let market_buy = OrderRequest {
+        let market_sell = OrderRequest {
+            symbol: symbol.to_string(),
+            quantity: Some(amount),
+            order_type: OrderType::Market,
+            side: OrderSide::Sell,
+            position_side: match self.dual_postition {
+                true => Some(PositionSide::Short),
+                false => Some(PositionSide::Both),
+            },
+            ..OrderRequest::default()
+        };
+        match self.account.place_order(market_sell).await {
+            Ok(answer) => info!("{:?}", answer),
+            Err(e) => error!("Error: {e}"),
+        }
+    }
+
+    pub async fn closeshort(&self, symbol: &String, amount: f64) {
+        let market_sell = OrderRequest {
             symbol: symbol.to_string(),
             quantity: Some(amount),
             order_type: OrderType::Market,
             side: OrderSide::Buy,
-            ..OrderRequest::default()
-        };
-        match self.account.place_order(market_buy).await {
-            Ok(answer) => info!("{:?}", answer),
-            Err(e) => error!("Error: {e}"),
-        }
-
-        let market_sell = OrderRequest {
-            symbol: symbol.to_string(),
-            quantity: Some(0.001),
-            order_type: OrderType::Market,
-            side: OrderSide::Sell,
+            position_side: match self.dual_postition {
+                true => Some(PositionSide::Short),
+                false => Some(PositionSide::Both),
+            },
             ..OrderRequest::default()
         };
         match self.account.place_order(market_sell).await {
@@ -67,6 +90,28 @@ impl Exchange {
             quantity: Some(amount),
             order_type: OrderType::Market,
             side: OrderSide::Buy,
+            position_side: match self.dual_postition {
+                true => Some(PositionSide::Long),
+                false => Some(PositionSide::Both),
+            },
+            ..OrderRequest::default()
+        };
+        match self.account.place_order(market_buy).await {
+            Ok(answer) => info!("{:?}", answer),
+            Err(e) => error!("Error: {e}"),
+        }
+    }
+
+    pub async fn closelong(&self, symbol: &String, amount: f64) {
+        let market_buy = OrderRequest {
+            symbol: symbol.to_string(),
+            quantity: Some(amount),
+            order_type: OrderType::Market,
+            side: OrderSide::Sell,
+            position_side: match self.dual_postition {
+                true => Some(PositionSide::Long),
+                false => Some(PositionSide::Both),
+            },
             ..OrderRequest::default()
         };
         match self.account.place_order(market_buy).await {
@@ -84,7 +129,41 @@ impl Exchange {
             price.bid_price
         }
     }
-    pub async fn get_balance(&self) -> Vec<Balance> {
-        self.account.get_account().await.unwrap().balances
+
+    pub async fn get_balance(&self) -> Vec<AccountBalance> {
+        self.account.account_balance().await.unwrap()
+    }
+
+    pub async fn update_account(&mut self) {
+        self.account_info = self.account.account_information().await.unwrap();
+    }
+
+    pub fn get_position_mode(&self) -> bool {
+        let account_info = self.account_info.clone();
+        match account_info.positions.iter().next().unwrap().position_side {
+            PositionSide::Both => false,
+            PositionSide::Long => true,
+            PositionSide::Short => true,
+        }
+    }
+
+    pub async fn get_symbol_info(&self, filters: String) -> Symbol {
+        let symbols = &self.exchange_info.symbols;
+        let symbol = symbols
+            .iter()
+            .filter(|sym| sym.symbol == filters)
+            .next()
+            .unwrap();
+        symbol.clone()
+    }
+    pub async fn get_current_position(&self, symbol: String) -> AccountPosition {
+        let open_order = self.account_info.clone();
+        open_order
+            .positions
+            .iter()
+            .filter(|posi| posi.symbol.eq(&symbol))
+            .next()
+            .unwrap()
+            .clone()
     }
 }

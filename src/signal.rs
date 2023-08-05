@@ -113,11 +113,13 @@ pub async fn trade_signal_handler(data: Order) {
                 };
                 exchange.openlong(&symbol, amount).await;
                 exchange.update_account().await;
+                let margin = amount * price / lev.parse::<f64>().unwrap();
+                let margin = exchange.price_to_precision(margin);
                 let balance = exchange.account_info.total_wallet_balance.clone();
                 let balance = exchange.price_to_precision(balance);
                 notify_send(format!(
                     "ORDER INFO:\nSymbol: {symbol}\nPrice: {price}\nSignal: {:#?}\n\
-Amount: {amount}\nLeverage: {lev}\nBalance : {balance} $",
+Amount: {amount}\nLeverage: {lev}\nMargin: {margin} $\nBalance : {balance} $",
                     side
                 ))
                 .await;
@@ -133,11 +135,13 @@ Amount: {amount}\nLeverage: {lev}\nBalance : {balance} $",
                 };
                 exchange.openshort(&symbol, amount).await;
                 exchange.update_account().await;
+                let margin = amount * price / lev.parse::<f64>().unwrap();
+                let margin = exchange.price_to_precision(margin);
                 let balance = exchange.account_info.total_wallet_balance.clone();
                 let balance = exchange.price_to_precision(balance);
                 notify_send(format!(
                     "ORDER INFO:\nSymbol: {symbol}\nPrice: {price}\nSignal: {:#?}\n\
-Amount: {amount}\nLeverage: {lev}\nBalance : {balance} $",
+Amount: {amount}\nLeverage: {lev}\nMargin: {margin} $\nBalance : {balance} $",
                     side
                 ))
                 .await;

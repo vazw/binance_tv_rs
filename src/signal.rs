@@ -117,7 +117,7 @@ pub async fn trade_signal_handler(data: Order) {
                 let balance = exchange.amount_to_precision(balance, 3);
                 notify_send(format!(
                     "ORDER INFO:\nSymbol: {symbol}\nPrice: {price}\nSignal: {:#?}\n\
-Amount: {amount}\nLeverage: {lev}\nBalance : {balance}",
+Amount: {amount}\nLeverage: {lev}\nBalance : {balance} $",
                     side
                 ))
                 .await;
@@ -137,33 +137,35 @@ Amount: {amount}\nLeverage: {lev}\nBalance : {balance}",
                 let balance = exchange.amount_to_precision(balance, 3);
                 notify_send(format!(
                     "ORDER INFO:\nSymbol: {symbol}\nPrice: {price}\nSignal: {:#?}\n\
-Amount: {amount}\nLeverage: {lev}\nBalance : {balance}",
+Amount: {amount}\nLeverage: {lev}\nBalance : {balance} $",
                     side
                 ))
                 .await;
             }
             NewOrderSide::CloseLong => {
                 let unpnl = open_positions.unrealized_profit;
+                let unpnl = exchange.amount_to_precision(unpnl, 3);
                 exchange.closelong(&symbol, amount).await;
                 exchange.update_account().await;
                 let balance = exchange.account_info.total_wallet_balance.clone();
                 let balance = exchange.amount_to_precision(balance, 3);
                 notify_send(format!(
                     "ORDER INFO:\nSymbol: {symbol}\nPrice: {price}\nSignal: {:#?}\n\
-Amount: {amount}\nLeverage: {lev}\nClosed P/L: {unpnl}\nBalance : {balance}",
+Amount: {amount}\nLeverage: {lev}\nClosed P/L: {unpnl} $\nBalance : {balance} $",
                     side
                 ))
                 .await;
             }
             NewOrderSide::CloseShort => {
                 let unpnl = open_positions.unrealized_profit;
+                let unpnl = exchange.amount_to_precision(unpnl, 3);
                 exchange.closeshort(&symbol, amount).await;
                 exchange.update_account().await;
                 let balance = exchange.account_info.total_wallet_balance.clone();
                 let balance = exchange.amount_to_precision(balance, 3);
                 notify_send(format!(
                     "ORDER INFO:\nSymbol: {symbol}\nPrice: {price}\nSignal: {:#?}\n\
-Amount: {amount}\nLeverage: {lev}\nClosed P/L: {unpnl}\nBalance : {balance}",
+Amount: {amount}\nLeverage: {lev}\nClosed P/L: {unpnl} $\nBalance : {balance} $",
                     side
                 ))
                 .await;

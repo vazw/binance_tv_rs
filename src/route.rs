@@ -1,12 +1,15 @@
 use crate::signal::*;
 use actix_rt::Arbiter;
+use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpResponse, Responder};
 use web::Json;
 
 #[get("/")]
 pub async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("https://www.github.com/vazw")
+    HttpResponse::Ok()
+        .content_type(ContentType::html())
+        .body("<a href='https://www.github.com/vazw'>About Me</a>")
 }
 
 #[post("/order")]

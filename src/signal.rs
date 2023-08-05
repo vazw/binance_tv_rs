@@ -99,6 +99,12 @@ pub async fn trade_signal_handler(data: Order) {
     } else {
         raw_amount.parse().unwrap()
     };
+    let unpnl = open_positions.unrealized_profit;
+    let unpnl = exchange.price_to_precision(unpnl);
+    // let balance = exchange.account_info.total_wallet_balance.clone();
+    // let balance = exchange.price_to_precision(balance);
+    let margin = amount * price / lev.parse::<f64>().unwrap();
+    let margin = exchange.price_to_precision(margin);
     let amount = exchange.amount_to_precision(amount, symbol_info.quantity_precision as i32);
     if amount != 0.0 {
         match side {
@@ -113,8 +119,6 @@ pub async fn trade_signal_handler(data: Order) {
                 };
                 exchange.openlong(&symbol, amount).await;
                 exchange.update_account().await;
-                let margin = amount * price / lev.parse::<f64>().unwrap();
-                let margin = exchange.price_to_precision(margin);
                 let balance = exchange.account_info.total_wallet_balance.clone();
                 let balance = exchange.price_to_precision(balance);
                 notify_send(format!(
@@ -135,8 +139,6 @@ Amount: {amount}\nLeverage: {lev}\nMargin: {margin} $\nBalance : {balance} $",
                 };
                 exchange.openshort(&symbol, amount).await;
                 exchange.update_account().await;
-                let margin = amount * price / lev.parse::<f64>().unwrap();
-                let margin = exchange.price_to_precision(margin);
                 let balance = exchange.account_info.total_wallet_balance.clone();
                 let balance = exchange.price_to_precision(balance);
                 notify_send(format!(
@@ -147,8 +149,6 @@ Amount: {amount}\nLeverage: {lev}\nMargin: {margin} $\nBalance : {balance} $",
                 .await;
             }
             NewOrderSide::CloseLong => {
-                let unpnl = open_positions.unrealized_profit;
-                let unpnl = exchange.price_to_precision(unpnl);
                 exchange.closelong(&symbol, amount).await;
                 exchange.update_account().await;
                 let balance = exchange.account_info.total_wallet_balance.clone();
@@ -161,8 +161,6 @@ Amount: {amount}\nLeverage: {lev}\nClosed P/L: {unpnl} $\nBalance : {balance} $"
                 .await;
             }
             NewOrderSide::CloseShort => {
-                let unpnl = open_positions.unrealized_profit;
-                let unpnl = exchange.price_to_precision(unpnl);
                 exchange.closeshort(&symbol, amount).await;
                 exchange.update_account().await;
                 let balance = exchange.account_info.total_wallet_balance.clone();

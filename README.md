@@ -1,4 +1,4 @@
-# Binance_TV_rs
+# Binance_TV_rs ![Workflow](https://github.com/vazw/binance_tv_rs/actions/workflows/rust.yml/badge.svg)
 Personal challenge, Rewrote Tradingview_Binance_API Project With Rust.
 
 ## Environments Variables

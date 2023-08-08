@@ -101,11 +101,12 @@ pub async fn trade_signal_handler(data: Order) {
     };
     let unpnl = open_positions.unrealized_profit;
     let unpnl = exchange.price_to_precision(unpnl);
-    // let balance = exchange.account_info.total_wallet_balance.clone();
-    // let balance = exchange.price_to_precision(balance);
+    let balance = exchange.account_info.total_wallet_balance.clone();
+    let balance = exchange.price_to_precision(balance);
     let margin = amount * price / lev.parse::<f64>().unwrap();
     let margin = exchange.price_to_precision(margin);
     let amount = exchange.amount_to_precision(amount, symbol_info.quantity_precision as i32);
+    let sum_margin = exchange.get_all_position_margin();
     if amount != 0.0 {
         match side {
             NewOrderSide::OpenLong => {
@@ -114,19 +115,21 @@ pub async fn trade_signal_handler(data: Order) {
                     .change_initial_leverage(&symbol, lev.parse::<u8>().unwrap())
                     .await
                 {
-                    Ok(respone) => info!("Changed Leverage : {:?}", respone),
+                    Ok(respone) => info!("Changed Leverage : {:?}", respone.leverage),
                     Err(error) => info!("Can not Changed Leverage: {:?}", error),
                 };
-                exchange.openlong(&symbol, amount).await;
-                exchange.update_account().await;
-                let balance = exchange.account_info.total_wallet_balance.clone();
-                let balance = exchange.price_to_precision(balance);
-                notify_send(format!(
-                    "ORDER INFO:\nSymbol: {symbol}\nPrice: {price}\nSignal: {:#?}\n\
+                if sum_margin < balance * 3.0 {
+                    exchange.openlong(&symbol, amount).await;
+                    exchange.update_account().await;
+                    let balance = exchange.account_info.total_wallet_balance.clone();
+                    let balance = exchange.price_to_precision(balance);
+                    notify_send(format!(
+                        "ORDER INFO:\nSymbol: {symbol}\nPrice: {price}\nSignal: {:#?}\n\
 Amount: {amount}\nLeverage: {lev}\nMargin: {margin} $\nBalance : {balance} $",
-                    side
-                ))
-                .await;
+                        side
+                    ))
+                    .await;
+                };
             }
             NewOrderSide::OpenShort => {
                 match exchange
@@ -134,19 +137,21 @@ Amount: {amount}\nLeverage: {lev}\nMargin: {margin} $\nBalance : {balance} $",
                     .change_initial_leverage(&symbol, lev.parse::<u8>().unwrap())
                     .await
                 {
-                    Ok(respone) => info!("Changed Leverage : {:?}", respone),
+                    Ok(respone) => info!("Changed Leverage : {:?}", respone.leverage),
                     Err(error) => info!("Can not Changed Leverage: {:?}", error),
                 };
-                exchange.openshort(&symbol, amount).await;
-                exchange.update_account().await;
-                let balance = exchange.account_info.total_wallet_balance.clone();
-                let balance = exchange.price_to_precision(balance);
-                notify_send(format!(
-                    "ORDER INFO:\nSymbol: {symbol}\nPrice: {price}\nSignal: {:#?}\n\
+                if sum_margin < balance * 3.0 {
+                    exchange.openshort(&symbol, amount).await;
+                    exchange.update_account().await;
+                    let balance = exchange.account_info.total_wallet_balance.clone();
+                    let balance = exchange.price_to_precision(balance);
+                    notify_send(format!(
+                        "ORDER INFO:\nSymbol: {symbol}\nPrice: {price}\nSignal: {:#?}\n\
 Amount: {amount}\nLeverage: {lev}\nMargin: {margin} $\nBalance : {balance} $",
-                    side
-                ))
-                .await;
+                        side
+                    ))
+                    .await;
+                };
             }
             NewOrderSide::CloseLong => {
                 exchange.closelong(&symbol, amount).await;

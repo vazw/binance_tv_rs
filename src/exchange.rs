@@ -161,6 +161,7 @@ impl Exchange {
             .unwrap();
         symbol.clone()
     }
+
     pub async fn get_current_position(&self, symbol: String) -> AccountPosition {
         let open_order = self.account_info.clone();
         open_order
@@ -170,5 +171,14 @@ impl Exchange {
             .next()
             .unwrap()
             .clone()
+    }
+
+    pub fn get_all_position_margin(&self) -> f64 {
+        let account_info = self.account_info.clone();
+        let mut sum_margin: f64 = 0.0;
+        for position in account_info.positions.into_iter() {
+            sum_margin += position.initial_margin * position.leverage as f64;
+        }
+        sum_margin
     }
 }

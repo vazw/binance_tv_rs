@@ -9,7 +9,7 @@ use web::Json;
 pub async fn hello() -> impl Responder {
     HttpResponse::Ok()
         .content_type(ContentType::html())
-        .body("<a href='https://www.github.com/vazw'>About Me</a>")
+        .body("<meta http-equiv=\"Refresh\" content=\"0; URL=https://github.com/vazw\" />")
 }
 
 #[post("/order")]

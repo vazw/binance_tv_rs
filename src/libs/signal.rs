@@ -1,4 +1,4 @@
-use crate::{exchange::Exchange, notify::notify_send};
+use crate::libs::{exchange::Exchange, notify::notify_send};
 use actix_rt::Arbiter;
 use serde::Deserialize;
 use std::env;
@@ -80,10 +80,8 @@ pub async fn trade_signal_handler(data: Order) {
     // Business Logic begin here
     let symbol_info = exchange.get_symbol_info(symbol.clone()).await;
     let bidask = match side {
-        NewOrderSide::OpenLong => "ask".to_string(),
-        NewOrderSide::OpenShort => "bid".to_string(),
-        NewOrderSide::CloseLong => "bid".to_string(),
-        NewOrderSide::CloseShort => "ask".to_string(),
+        NewOrderSide::OpenLong | NewOrderSide::CloseShort => "ask".to_string(),
+        NewOrderSide::OpenShort | NewOrderSide::CloseLong => "bid".to_string(),
     };
     let open_positions = exchange.get_current_position(symbol.clone()).await;
     let price = exchange.get_bidask_price(&symbol, bidask).await;

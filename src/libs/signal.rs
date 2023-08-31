@@ -14,10 +14,8 @@ pub enum NewOrderSide {
 impl NewOrderSide {
     pub fn is_close_order(&self) -> bool {
         match self {
-            Self::OpenLong => false,
-            Self::OpenShort => false,
-            Self::CloseLong => true,
-            NewOrderSide::CloseShort => true,
+            Self::OpenLong | Self::OpenShort => false,
+            Self::CloseLong | Self::CloseShort => true,
         }
     }
 }
